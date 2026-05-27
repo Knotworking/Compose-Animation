@@ -37,8 +37,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// ── Colour palette ────────────────────────────────────────────────────────
-
 private val FlourishColors = listOf(
     Color(0xFFE91E63),  // Hot Pink
     Color(0xFF00BCD4),  // Cyan
@@ -48,7 +46,7 @@ private val FlourishColors = listOf(
     Color(0xFF7C4DFF),  // Vivid Violet
 )
 
-// ── Overlap timing (ms from button press) ─────────────────────────────────
+// Times since button press, so that we can overlap the animations
 /** Phase 1 (rise) always starts at t = 0. */
 /** Spin begins this many ms after the rise, overlapping its bouncy tail. */
 private const val SpinStartDelayMs = 150L
@@ -73,7 +71,6 @@ private const val SpinDegrees = 360f
 private const val SpinDurationMs = 400
 
 // ── Grow ──────────────────────────────────────────────────────────────────
-/** Peak scale factor during the bloom. 1.4 = 40% larger than resting size. */
 private const val GrowScale = 1.4f
 private const val GrowStiffness = 500f   // peaks in ~150ms
 private const val GrowDamping = 0.4f  // visibly overshoots before settling
@@ -96,8 +93,7 @@ fun FlourishAnimationScreen(modifier: Modifier = Modifier) {
     val scale = remember { Animatable(1f) }
     val color = remember { ColorAnimatable(FlourishColors[0]) }
 
-    // ── Named animation phases ────────────────────────────────────────────
-    // Local suspend funs capture the Animatables above via closure, keeping
+    // Local suspend functions capture the Animatables above via closure, keeping
     // the choreography block below easy to read and tweak.
 
     suspend fun rise() {
@@ -147,8 +143,6 @@ fun FlourishAnimationScreen(modifier: Modifier = Modifier) {
             animationSpec = spring(stiffness = DescendStiffness, dampingRatio = DescendDamping),
         )
     }
-
-    // ─────────────────────────────────────────────────────────────────────
 
     val scope = rememberCoroutineScope()
 
