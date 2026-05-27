@@ -2,9 +2,7 @@ package com.knotworking.animations.screens
 
 import androidx.compose.animation.Animatable as ColorAnimatable
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -39,6 +37,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+// ── Colour palette ────────────────────────────────────────────────────────
+
 private val FlourishColors = listOf(
     Color(0xFFE91E63),  // Hot Pink
     Color(0xFF00BCD4),  // Cyan
@@ -47,6 +47,44 @@ private val FlourishColors = listOf(
     Color(0xFFFF5722),  // Deep Orange
     Color(0xFF7C4DFF),  // Vivid Violet
 )
+
+// ── Overlap timing (ms from button press) ─────────────────────────────────
+/** Phase 1 (rise) always starts at t = 0. */
+/** Spin begins this many ms after the rise, overlapping its bouncy tail. */
+private const val SpinStartDelayMs = 150L
+
+/** Grow begins this many ms after the rise, overlapping the spin's last 150ms. */
+private const val GrowStartDelayMs = 400L
+
+/** Descent begins this many ms after the rise, ~150ms before the settle-back finishes. */
+private const val DescendStartDelayMs = 1000L
+
+// ── Rise ──────────────────────────────────────────────────────────────────
+/** How far upward the shape travels, in px. Negative = up the screen. */
+private const val RiseTranslationY = -80f
+private const val RiseStiffness = 600f   // snappy — gets there in ~250ms
+private const val RiseDamping = 0.55f  // one light jiggle at the top
+
+// ── Spin + colour ─────────────────────────────────────────────────────────
+/** Degrees rotated in one flourish. 360 = one full clockwise turn. */
+private const val SpinDegrees = 360f
+
+/** Duration of the spin and simultaneous colour blend, in ms. */
+private const val SpinDurationMs = 400
+
+// ── Grow ──────────────────────────────────────────────────────────────────
+/** Peak scale factor during the bloom. 1.4 = 40% larger than resting size. */
+private const val GrowScale = 1.4f
+private const val GrowStiffness = 500f   // peaks in ~150ms
+private const val GrowDamping = 0.4f  // visibly overshoots before settling
+
+// ── Settle-back (bloom → normal size) ────────────────────────────────────
+private const val SettleStiffness = 400f
+private const val SettleDamping = 0.6f  // single small under-bounce at 1f
+
+// ── Descent ───────────────────────────────────────────────────────────────
+private const val DescendStiffness = 300f  // slightly softer than the rise
+private const val DescendDamping = 0.7f  // lands with a gentle thud
 
 @Composable
 fun FlourishAnimationScreen(modifier: Modifier = Modifier) {
@@ -57,6 +95,60 @@ fun FlourishAnimationScreen(modifier: Modifier = Modifier) {
     val rotation = remember { Animatable(0f) }
     val scale = remember { Animatable(1f) }
     val color = remember { ColorAnimatable(FlourishColors[0]) }
+
+    // ── Named animation phases ────────────────────────────────────────────
+    // Local suspend funs capture the Animatables above via closure, keeping
+    // the choreography block below easy to read and tweak.
+
+    suspend fun rise() {
+        offsetY.animateTo(
+            targetValue = RiseTranslationY,
+            animationSpec = spring(stiffness = RiseStiffness, dampingRatio = RiseDamping),
+        )
+    }
+
+    suspend fun spinAndRecolour(targetColor: Color, startRotation: Float) {
+        coroutineScope {
+            launch {
+                rotation.animateTo(
+                    targetValue = startRotation + SpinDegrees,
+                    animationSpec = tween(
+                        durationMillis = SpinDurationMs,
+                        easing = FastOutSlowInEasing
+                    ),
+                )
+            }
+            launch {
+                color.animateTo(
+                    targetValue = targetColor,
+                    animationSpec = tween(
+                        durationMillis = SpinDurationMs,
+                        easing = FastOutSlowInEasing
+                    ),
+                )
+            }
+        }
+    }
+
+    suspend fun growAndSettle() {
+        scale.animateTo(
+            targetValue = GrowScale,
+            animationSpec = spring(stiffness = GrowStiffness, dampingRatio = GrowDamping),
+        )
+        scale.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(stiffness = SettleStiffness, dampingRatio = SettleDamping),
+        )
+    }
+
+    suspend fun descend() {
+        offsetY.animateTo(
+            targetValue = 0f,
+            animationSpec = spring(stiffness = DescendStiffness, dampingRatio = DescendDamping),
+        )
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
 
     val scope = rememberCoroutineScope()
 
@@ -93,67 +185,25 @@ fun FlourishAnimationScreen(modifier: Modifier = Modifier) {
                     val nextIndex = (colorIndex + 1) % FlourishColors.size
                     scope.launch {
                         isAnimating = true
-                        // Snapshot rotation before any animation begins — used inside keyframes
-                        val spinStartRotation = rotation.value
+                        val spinStartRotation = rotation.value  // snapshot before animation begins
 
+                        // Each phase launches in parallel at a staggered delay so the
+                        // start of the next overlaps the tail of the previous.
                         coroutineScope {
-                            // Phase 1 — Rise: starts immediately
+                            launch { rise() }
                             launch {
-                                offsetY.animateTo(
-                                    targetValue = -80f,
-                                    animationSpec = spring(stiffness = 600f, dampingRatio = 0.55f),
-                                )
+                                delay(SpinStartDelayMs); spinAndRecolour(
+                                FlourishColors[nextIndex],
+                                spinStartRotation
+                            )
                             }
-
-                            // Phase 2 — Spin + colour: starts 150ms in, overlapping Phase 1's tail
                             launch {
-                                delay(150)
-                                coroutineScope {
-                                    launch {
-                                        // 3 full rotations; keyframe at 300ms makes first half
-                                        // arrive at 1/3 of duration — slow wind-up into fast burst
-                                        rotation.animateTo(
-                                            targetValue = spinStartRotation + 1080f,
-                                            animationSpec = keyframes {
-                                                durationMillis = 900
-                                                spinStartRotation + 540f at 300 using EaseIn
-                                            },
-                                        )
-                                    }
-                                    launch {
-                                        color.animateTo(
-                                            targetValue = FlourishColors[nextIndex],
-                                            animationSpec = tween(
-                                                durationMillis = 900,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                        )
-                                    }
-                                }
+                                delay(GrowStartDelayMs)
+                                growAndSettle()
                             }
-
-                            // Phase 3 — Grow + settle: starts at 900ms, overlapping Phase 2's last 150ms
                             launch {
-                                delay(900)
-                                // Bloom with clear overshoot; stiffness 500 peaks in ~150ms
-                                scale.animateTo(
-                                    targetValue = 1.4f,
-                                    animationSpec = spring(stiffness = 500f, dampingRatio = 0.4f),
-                                )
-                                // Settle back with a single small under-bounce
-                                scale.animateTo(
-                                    targetValue = 1f,
-                                    animationSpec = spring(stiffness = 400f, dampingRatio = 0.6f),
-                                )
-                            }
-
-                            // Phase 4 — Descent: starts at 1300ms, during Phase 3's settle-back
-                            launch {
-                                delay(1300)
-                                offsetY.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = spring(stiffness = 300f, dampingRatio = 0.7f),
-                                )
+                                delay(DescendStartDelayMs)
+                                descend()
                             }
                         }
 
