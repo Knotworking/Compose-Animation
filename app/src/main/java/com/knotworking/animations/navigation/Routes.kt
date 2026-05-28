@@ -9,20 +9,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
-sealed interface NavRoute : NavKey
+sealed interface TabRoute : NavKey
 
 @Serializable
-data object VisibilityRoute : NavRoute
+data object VisibilityRoute : TabRoute
 @Serializable
-data object PositionRoute : NavRoute
+data object PositionRoute : TabRoute
 @Serializable
-data object ColorRoute : NavRoute
+data object ColorRoute : TabRoute
 @Serializable
-data object FlourishRoute : NavRoute
+data object FlourishRoute : TabRoute
 
-val allRoutes: List<NavRoute> = listOf(VisibilityRoute, PositionRoute, ColorRoute, FlourishRoute)
+@Serializable
+data class VisibilityDetailRoute(val imageUrl: String) : NavKey
 
-val NavRoute.label: String
+val allTabRoutes: List<TabRoute> = listOf(VisibilityRoute, PositionRoute, ColorRoute, FlourishRoute)
+
+val TabRoute.label: String
     get() = when (this) {
         VisibilityRoute -> "Visibility"
         PositionRoute -> "Position"
@@ -30,7 +33,7 @@ val NavRoute.label: String
         FlourishRoute -> "Flourish"
     }
 
-val NavRoute.icon: ImageVector
+val TabRoute.icon: ImageVector
     get() = when (this) {
         VisibilityRoute -> Icons.Default.Visibility
         PositionRoute -> Icons.Default.OpenWith
