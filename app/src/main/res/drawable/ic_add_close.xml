@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+        Plus sign made of two thin filled rectangles.
+        bar1 = horizontal bar, bar2 = vertical bar.
+        Both morph into the two diagonal bars of a close (×) icon.
+    -->
+    <path
+        android:name="bar1"
+        android:fillColor="#FF000000"
+        android:pathData="M 4,11 L 20,11 L 20,13 L 4,13 Z" />
+    <path
+        android:name="bar2"
+        android:fillColor="#FF000000"
+        android:pathData="M 11,4 L 13,4 L 13,20 L 11,20 Z" />
+</vector>
