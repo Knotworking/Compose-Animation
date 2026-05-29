@@ -146,7 +146,12 @@ private fun FavoriteCard(isFavorite: Boolean, onClick: () -> Unit) {
         label = "heart color",
     )
     val heartScale = remember { Animatable(1f) }
+    var isInitialComposition by remember { mutableStateOf(true) }
     LaunchedEffect(isFavorite) {
+        if (isInitialComposition) {
+            isInitialComposition = false
+            return@LaunchedEffect
+        }
         if (isFavorite) {
             heartScale.animateTo(1.3f, spring(dampingRatio = 0.3f, stiffness = 900f))
             heartScale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 400f))
