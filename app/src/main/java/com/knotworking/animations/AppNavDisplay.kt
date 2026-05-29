@@ -1,14 +1,23 @@
 package com.knotworking.animations
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
 import com.knotworking.animations.navigation.ColorRoute
 import com.knotworking.animations.navigation.FlourishRoute
@@ -60,6 +69,8 @@ fun AppNavDisplay() {
             NavDisplay(
                 backStack = backStack,
                 onBack = { backStack.removeLastOrNull() },
+                transitionSpec = fadeTransition,
+                popTransitionSpec = fadeTransition,
                 entryProvider = entryProvider {
                     entry<VisibilityRoute> {
                         VisibilityAnimationScreen(
@@ -82,6 +93,12 @@ fun AppNavDisplay() {
         }
     }
 }
+
+private val fadeTransition: AnimatedContentTransitionScope<Scene<NavKey>>.() -> ContentTransform =
+    {
+        fadeIn(tween(500)) togetherWith
+                fadeOut(tween(500))
+    }
 
 @Preview
 @Composable
