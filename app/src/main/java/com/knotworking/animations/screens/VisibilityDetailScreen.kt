@@ -1,7 +1,10 @@
 package com.knotworking.animations.screens
 
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +16,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
@@ -38,6 +43,12 @@ fun VisibilityDetailScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         val animatedContentScope = LocalNavAnimatedContentScope.current
+        val isExiting = animatedContentScope.transition.targetState == EnterExitState.PostExit
+        val contentAlpha by animateFloatAsState(
+            targetValue = if (isExiting) 0f else 1f,
+            animationSpec = tween(durationMillis = 300),
+            label = "contentAlpha",
+        )
         with(sharedTransitionScope) {
             AsyncImage(
                 model = imageUrl,
@@ -51,20 +62,23 @@ fun VisibilityDetailScreen(
                         animatedVisibilityScope = animatedContentScope,
                     ),
             )
-        }
-
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Animation Detail",
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Spacer(Modifier.height(12.dp))
-            repeat(4) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .graphicsLayer { alpha = contentAlpha },
+            ) {
                 Text(
-                    text = LOREM,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Animation Detail",
+                    style = MaterialTheme.typography.headlineMedium,
                 )
                 Spacer(Modifier.height(12.dp))
+                repeat(4) {
+                    Text(
+                        text = LOREM,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
             }
         }
     }
